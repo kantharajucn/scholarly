@@ -286,6 +286,28 @@ class Publication(object):
             self._filled = True
         return self
 
+    def citations(self):
+        """Populate Title and citations"""
+        if self.source == 'citations':
+            url = _CITATIONPUB.format(self.id_citations)
+            soup = self.nav._get_soup(url)
+            self.bib['title'] = soup.find('div', id='gsc_vcd_title').text
+
+            years = [int(y.text) for y in soup.find_all(class_='gsc_vcd_g_t')]
+            cites = [int(c.text) for c in soup.find_all(class_='gsc_vcd_g_al')]
+            self.cites_per_year = dict(zip(years, cites))
+            if soup.find('div', class_='gsc_vcd_title_ggi'):
+                self.bib['eprint'] = soup.find(
+                    'div', class_='gsc_vcd_title_ggi').a['href']
+            self._filled = True
+        elif self.source == 'scholar':
+            bibtex_url = self._get_bibtex(self.url_scholarbib)
+            bibtex = self.nav._get_page(bibtex_url)
+            parser = bibtexparser.bparser.BibTexParser(common_strings=True)
+            self.bib.update(bibtexparser.loads(bibtex, parser).entries[-1])
+            self._filled = True
+        return self
+
     @property
     def citedby(self) -> _SearchScholarIterator or list:
         """Searches Google Scholar for other articles that cite this Publication and
